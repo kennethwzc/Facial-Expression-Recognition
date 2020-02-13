@@ -12,12 +12,17 @@ import transforms as transforms
 from skimage import io
 from skimage.transform import resize
 from models import *
+import csv
+from datetime import datetime
+import pandas as pd
 
 cam = cv2.VideoCapture(0)
 
 cv2.namedWindow("Video Feed")
 
 img_counter = 0
+
+data_df = pd.DataFrame(columns=['time_stamp', 'emotion'])
 
 while True:
     
@@ -69,7 +74,7 @@ while True:
 
 
 
-
+            # Expression Detection
             cut_size = 44
 
             transform_test = transforms.Compose([transforms.TenCrop(cut_size), transforms.Lambda(lambda crops: torch.stack([transforms.ToTensor()(crop) for crop in crops])),])
@@ -108,10 +113,19 @@ while True:
 
             score = F.softmax(outputs_avg)
             _, predicted = torch.max(outputs_avg.data, 0)
-     
-            print("The Expression is %s" %str(class_names[int(predicted.cpu().numpy())]))
+
+
+
+
+            # Collect timestamp and emotion
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            emotion = str(class_names[int(predicted.cpu().numpy())])
+            print(dt_string + ' - ' + emotion)
+            data_df.loc[img_counter] =  [dt_string] + [emotion]
 
         img_counter += 1
+        data_df.to_csv(r'output_data.csv')
 
 cam.release()
 
